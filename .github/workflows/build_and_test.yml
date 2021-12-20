@@ -20,7 +20,7 @@ jobs:
         java:
           - 8
         hadoop:
-          - hadoop2.6
+          - hadoop2.7
         # TODO(SPARK-32246): We don't test 'streaming-kinesis-asl' for now.
         # Kinesis tests depends on external Amazon kinesis service.
         # Note that the modules below are from sparktestsupport/modules.py.
@@ -41,8 +41,6 @@ jobs:
           - >-
             pyspark-core, pyspark-streaming, pyspark-ml
           - >-
-            sparkr
-          - >-
             sql
         # Here, we split Hive and SQL tests into some of slow ones and the rest of them.
         included-tags: [""]
@@ -52,12 +50,12 @@ jobs:
           # Hive tests
           - modules: hive
             java: 8
-            hadoop: hadoop2.6
+            hadoop: hadoop2.7
             included-tags: org.apache.spark.tags.SlowHiveTest
             comment: "- slow tests"
           - modules: hive
             java: 8
-            hadoop: hadoop2.6
+            hadoop: hadoop2.7
             excluded-tags: org.apache.spark.tags.SlowHiveTest
             comment: "- other tests"
     env:
@@ -108,47 +106,21 @@ jobs:
       with:
         python-version: pypy3
         architecture: x64
-    - name: Install Python 3.6
+    - name: Install Python 3.7
       uses: actions/setup-python@v2
       if: contains(matrix.modules, 'pyspark')
       with:
-        python-version: 3.6
+        python-version: 3.7
         architecture: x64
-    - name: Install Python 2.7
-      uses: actions/setup-python@v2
-      # Yarn has a Python specific test too, for example, YarnClusterSuite.
-      with:
-        python-version: 2.7
-        architecture: x64
-    - name: Install Python packages (Python 3.6 and PyPy3)
+    - name: Install Python packages (Python 3.7 and PyPy3)
       if: contains(matrix.modules, 'pyspark')
       # PyArrow is not supported in PyPy yet, see ARROW-2651.
       run: |
-        python3.6 -m pip install numpy 'pyarrow<0.12.0' 'pandas<0.24.0' scipy xmlrunner
-        python3.6 -m pip list
+        python3.7 -m pip install numpy 'pyarrow<0.12.0' 'pandas<0.24.0' scipy xmlrunner
+        python3.7 -m pip list
         # PyPy does not have xmlrunner, and pandas<0.24.0 installation fails in PyPy3, just skipping.
         pypy3 -m pip install numpy scipy
         pypy3 -m pip list
-    - name: Install Python packages (Python 2.7)
-      if: contains(matrix.modules, 'pyspark') || (contains(matrix.modules, 'sql') && !contains(matrix.modules, 'sql-'))
-      run: |
-        # Some tests do not pass in PySpark with PyArrow, for example, pyspark.sql.tests.ArrowTests.
-        python2.7 -m pip install numpy 'pandas<0.24.0' scipy xmlrunner
-        python2.7 -m pip list
-    # SparkR
-    - name: Install R 4.0
-      uses: r-lib/actions/setup-r@v1
-      if: contains(matrix.modules, 'sparkr')
-      with:
-        r-version: 4.0
-    - name: Install R packages
-      if: contains(matrix.modules, 'sparkr')
-      run: |
-        # qpdf is required to reduce the size of PDFs to make CRAN check pass. See SPARK-32497.
-        sudo apt-get install -y libcurl4-openssl-dev qpdf
-        sudo Rscript -e "install.packages(c('knitr', 'rmarkdown', 'testthat', 'devtools', 'e1071', 'survival', 'arrow', 'roxygen2'), repos='https://cloud.r-project.org/')"
-        # Show installed packages in R.
-        sudo Rscript -e 'pkg_list <- as.data.frame(installed.packages()[, c(1,3:4)]); pkg_list[is.na(pkg_list$Priority), 1:2, drop = FALSE]'
     # Run the tests.
     - name: Run tests
       run: |
@@ -206,24 +178,14 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 8
-    - name: Install Python 3.6
+    - name: Install Python 3.7
       uses: actions/setup-python@v2
       with:
-        python-version: 3.6
+        python-version: 3.7
         architecture: x64
     - name: Install Python linter dependencies
       run: |
         pip3 install flake8 sphinx numpy
-    - name: Install R 4.0
-      uses: r-lib/actions/setup-r@v1
-      with:
-        r-version: 4.0
-    - name: Install R linter dependencies and SparkR
-      run: |
-        sudo apt-get install -y libcurl4-openssl-dev libgit2-dev libssl-dev libxml2-dev
-        sudo Rscript -e "install.packages(c('devtools'), repos='https://cloud.r-project.org/')"
-        sudo Rscript -e "devtools::install_github('jimhester/lintr@v2.0.1')"
-        ./R/install-dev.sh
     - name: Install Ruby 2.7 for documentation generation
       uses: actions/setup-ruby@v1
       with:
@@ -240,8 +202,6 @@ jobs:
       run: ./dev/lint-java
     - name: Python linter
       run: ./dev/lint-python
-    - name: R linter
-      run: ./dev/lint-r
     - name: License test
       run: ./dev/check-license
     - name: Dependencies test
